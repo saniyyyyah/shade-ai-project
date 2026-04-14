@@ -13,6 +13,14 @@ if uploaded_file is not None:
     # ubah ke array
     img = np.array(image)
 
+# crop tengah (area wajah sederhana)
+h, w, _ = img.shape
+face = img[h//4:3*h//4, w//4:3*w//4]
+
+# pakai area wajah
+avg_color = face.mean(axis=(0,1))
+r, g, b = avg_color
+
     # ambil rata-rata warna RGB
     avg_color = img.mean(axis=(0,1))
     r, g, b = avg_color
