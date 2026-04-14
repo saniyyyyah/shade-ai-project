@@ -1,6 +1,7 @@
 import streamlit as st
 from PIL import Image
 import numpy as np
+import cv2
 
 st.title("💄 Shade Recommendation Based on Undertone")
 
@@ -10,29 +11,25 @@ if uploaded_file is not None:
     image = Image.open(uploaded_file)
     st.image(image, caption="Foto kamu", use_column_width=True)
 
-    # ubah ke array
+    # convert ke array
     img = np.array(image)
 
     # crop tengah (area wajah sederhana)
     h, w, _ = img.shape
     face = img[h//4:3*h//4, w//4:3*w//4]
 
-    # ambil rata-rata warna dari wajah
-    avg_color = face.mean(axis=(0,1))
-    r, g, b = avg_color
+    # convert ke HSV
+    face_hsv = cv2.cvtColor(face, cv2.COLOR_RGB2HSV)
 
-    st.write(f"RGB: R={int(r)}, G={int(g)}, B={int(b)}")
+    # ambil rata-rata hue
+    avg_hue = face_hsv[:,:,0].mean()
 
-    # normalisasi RGB
-    total = r + g + b
-    r_norm = r / total
-    g_norm = g / total
-    b_norm = b / total
+    st.write(f"Hue detected: {int(avg_hue)}")
 
-    # threshold undertone (FIX)
-    if (r_norm - b_norm) > 0.02:
+    # klasifikasi undertone berdasarkan hue
+    if avg_hue < 20:
         undertone = "Warm"
-    elif (b_norm - r_norm) > 0.02:
+    elif avg_hue > 100:
         undertone = "Cool"
     else:
         undertone = "Neutral"
@@ -41,9 +38,9 @@ if uploaded_file is not None:
 
     # rekomendasi shade
     if undertone == "Warm":
-        shades = ["Coral", "Peach", "Warm Nude", "Terracotta"]
+        shades = ["Coral", "Peach", "Terracotta", "Orange Nude"]
     elif undertone == "Cool":
-        shades = ["Rose", "Berry", "Pink", "Plum"]
+        shades = ["Rose", "Berry", "Plum", "Pink"]
     else:
         shades = ["Mauve", "Soft Pink", "Natural Nude", "Dusty Rose"]
 
@@ -51,12 +48,12 @@ if uploaded_file is not None:
     colors = {
         "Coral": "#FF7F50",
         "Peach": "#FFCBA4",
-        "Warm Nude": "#C68642",
         "Terracotta": "#E2725B",
+        "Orange Nude": "#D2691E",
         "Rose": "#FF007F",
         "Berry": "#8A2BE2",
-        "Pink": "#FFC0CB",
         "Plum": "#8E4585",
+        "Pink": "#FFC0CB",
         "Mauve": "#E0B0FF",
         "Soft Pink": "#F4C2C2",
         "Natural Nude": "#D2B48C",
