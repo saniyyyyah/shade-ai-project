@@ -24,16 +24,19 @@ if uploaded_file is not None:
     st.write(f"RGB: R={int(r)}, G={int(g)}, B={int(b)}")
 
     # hitung selisih warna
-    rg = r - g
-    rb = r - b
+    # normalisasi RGB (biar tidak tergantung lighting)
+total = r + g + b
+r_norm = r / total
+g_norm = g / total
+b_norm = b / total
 
-    # tentukan undertone
-    if rg > 10 and rb > 10:
-        undertone = "Warm"
-    elif rb < -10:
-        undertone = "Cool"
-    else:
-        undertone = "Neutral"
+# logika undertone
+if r_norm > g_norm and r_norm > b_norm:
+    undertone = "Warm"
+elif b_norm > r_norm:
+    undertone = "Cool"
+else:
+    undertone = "Neutral"
 
     st.subheader(f"Undertone kamu: {undertone}")
 
