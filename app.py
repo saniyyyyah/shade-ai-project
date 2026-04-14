@@ -3,9 +3,10 @@ from PIL import Image
 import numpy as np
 import cv2
 
-st.title("💄 Shade AI")
+st.set_page_config(page_title="Shade AI", layout="centered")
+st.title("💄 Shade AI - Undertone Detection")
 
-uploaded_file = st.file_uploader("Upload foto", type=["jpg","png","jpeg"])
+uploaded_file = st.file_uploader("Upload foto wajah", type=["jpg","png","jpeg"])
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
@@ -13,14 +14,15 @@ if uploaded_file is not None:
 
     img = np.array(image)
 
-    # debug ukuran gambar
     st.write("Shape image:", img.shape)
 
     h, w, _ = img.shape
 
-    # crop aman (hindari kosong)
-    face = img[max(0, h//6):min(h, h//1.5),
-               max(0, w//6):min(w, w//1.5)]
+    # crop wajah aman
+    y1, y2 = int(h * 0.2), int(h * 0.8)
+    x1, x2 = int(w * 0.2), int(w * 0.8)
+
+    face = img[y1:y2, x1:x2]
 
     st.write("Face shape:", face.shape)
 
@@ -29,21 +31,31 @@ if uploaded_file is not None:
     else:
         hsv = cv2.cvtColor(face, cv2.COLOR_RGB2HSV)
 
-        hue = hsv[:, :, 0].mean()
+        hue = hsv[:, :, 0]
+        hue = hue[(hue > 5) & (hue < 170)]
 
-        st.write("Hue:", hue)
+        if len(hue) == 0:
+            avg_hue = 50
+        else:
+            avg_hue = hue.mean()
 
-        # logika undertone
-        if hue < 25:
+        st.write("Hue:", avg_hue)
+
+        # =====================
+        # UNDERTONE DETECTION
+        # =====================
+        if avg_hue < 25:
             undertone = "Warm"
-        elif hue > 95:
+        elif avg_hue > 95:
             undertone = "Cool"
         else:
             undertone = "Neutral"
 
-        st.success(f"Undertone: {undertone}")
+        st.success(f"✨ Undertone: {undertone}")
 
-        # rekomendasi
+        # =====================
+        # RECOMMENDATION
+        # =====================
         if undertone == "Warm":
             shades = ["Coral", "Peach", "Terracotta"]
         elif undertone == "Cool":
@@ -51,7 +63,9 @@ if uploaded_file is not None:
         else:
             shades = ["Mauve", "Nude"]
 
-        st.subheader("Rekomendasi Shade")
+        st.subheader("💄 Rekomendasi Shade")
 
         for s in shades:
-            st.write("💄", s)
+            st.write("💋", s)
+
+        st.info("AI menganalisis warna kulit berdasarkan distribusi HSV wajah")
