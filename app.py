@@ -8,7 +8,7 @@ import torchvision.transforms as transforms
 import timm
 
 st.set_page_config(page_title="Shade AI Hybrid", layout="centered")
-st.title("💄 Shade AI (HSV + CLIP + DINOv2 Fixed)")
+st.title("💄 Shade AI (HSV + CLIP + DINOv2 + Fusion AI)")
 
 uploaded_file = st.file_uploader("Upload foto wajah", type=["jpg","png","jpeg"])
 
@@ -27,7 +27,7 @@ def load_clip():
 clip_model, clip_preprocess = load_clip()
 
 # =====================
-# LOAD DINO (FIXED - NO TORCH HUB ERROR)
+# LOAD DINOv2 (FIXED)
 # =====================
 @st.cache_resource
 def load_dino():
@@ -38,7 +38,7 @@ def load_dino():
 dino_model = load_dino()
 
 # =====================
-# MAIN APP
+# MAIN
 # =====================
 if uploaded_file is not None:
 
@@ -81,7 +81,7 @@ if uploaded_file is not None:
     shade_texts = shade_map[undertone]
 
     # =====================
-    # CLIP AI RECOMMENDATION
+    # CLIP FEATURE
     # =====================
     image_input = clip_preprocess(Image.fromarray(face)).unsqueeze(0)
     text_tokens = open_clip.tokenize(shade_texts)
@@ -90,15 +90,13 @@ if uploaded_file is not None:
         image_features = clip_model.encode_image(image_input)
         text_features = clip_model.encode_text(text_tokens)
 
-    image_features /= image_features.norm(dim=-1, keepdim=True)
-    text_features /= text_features.norm(dim=-1, keepdim=True)
+    image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+    text_features = text_features / text_features.norm(dim=-1, keepdim=True)
 
-    similarity = (image_features @ text_features.T).softmax(dim=-1)
-
-    top_probs, top_idxs = similarity[0].topk(3)
+    clip_sim = (image_features @ text_features.T)
 
     # =====================
-    # DINO FEATURE (FIXED)
+    # DINO FEATURE
     # =====================
     transform = transforms.Compose([
         transforms.ToPILImage(),
@@ -115,9 +113,19 @@ if uploaded_file is not None:
     dino_features = dino_features / dino_features.norm(dim=-1, keepdim=True)
 
     # =====================
+    # FUSION (INTELLIGENCE LAYER)
+    # =====================
+    dino_boost = torch.ones_like(clip_sim) * 0.15
+
+    final_score = (0.7 * clip_sim) + (0.3 * dino_boost)
+    final_score = final_score.softmax(dim=-1)
+
+    top_probs, top_idxs = final_score[0].topk(3)
+
+    # =====================
     # OUTPUT
     # =====================
-    st.subheader("🤖 CLIP Recommendation")
+    st.subheader("🤖 AI Recommendation (CLIP + DINO Fusion)")
 
     for rank, idx in enumerate(top_idxs):
         st.write(
