@@ -52,3 +52,12 @@ r, g, b = avg_color
     st.success("Rekomendasi Shade:")
     for s in shades:
         st.write("💄", s)
+colors = {
+    "Coral": "#FF7F50",
+    "Peach": "#FFCBA4",
+    "Warm Nude": "#C68642",
+    "Terracotta": "#E2725B"
+}
+
+for s in shades:
+    st.markdown(f"💄 {s}")
