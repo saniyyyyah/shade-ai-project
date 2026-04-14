@@ -3,4 +3,5 @@ pillow
 numpy
 opencv-python-headless
 torch
+torchvision
 open_clip_torch
