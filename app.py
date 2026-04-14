@@ -17,38 +17,25 @@ if uploaded_file is not None:
     h, w, _ = img.shape
     face = img[h//4:3*h//4, w//4:3*w//4]
 
-    # ambil rata-rata warna dari area wajah
+    # ambil rata-rata warna dari wajah
     avg_color = face.mean(axis=(0,1))
     r, g, b = avg_color
 
     st.write(f"RGB: R={int(r)}, G={int(g)}, B={int(b)}")
 
-    # hitung selisih warna
-    # normalisasi RGB (biar tidak tergantung lighting)
-total = r + g + b
-r_norm = r / total
-g_norm = g / total
-b_norm = b / total
+    # normalisasi RGB
+    total = r + g + b
+    r_norm = r / total
+    g_norm = g / total
+    b_norm = b / total
 
-# logika undertone
-# normalisasi RGB
-total = r + g + b
-r_norm = r / total
-g_norm = g / total
-b_norm = b / total
-
-# threshold logic
-if (r_norm - b_norm) > 0.02:
-    undertone = "Warm"
-elif (b_norm - r_norm) > 0.02:
-    undertone = "Cool"
-else:
-    undertone = "Neutral"
-    undertone = "Warm"
-elif b_norm > r_norm:
-    undertone = "Cool"
-else:
-    undertone = "Neutral"
+    # threshold undertone (FIX)
+    if (r_norm - b_norm) > 0.02:
+        undertone = "Warm"
+    elif (b_norm - r_norm) > 0.02:
+        undertone = "Cool"
+    else:
+        undertone = "Neutral"
 
     st.subheader(f"Undertone kamu: {undertone}")
 
