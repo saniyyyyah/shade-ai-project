@@ -6,3 +6,7 @@ torch
 torchvision
 timm
 open_clip_torch
+diffusers
+transformers
+accelerate
+scipy
