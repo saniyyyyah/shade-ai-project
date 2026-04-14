@@ -13,19 +13,18 @@ if uploaded_file is not None:
     img = np.array(image)
 
     # ambil rata-rata warna
-    avg_color = img.mean(axis=(0,1))
-    r, g, b = avg_color
+   # selisih warna
+rg = r - g
+rb = r - b
+gb = g - b
 
-    st.write(f"RGB: R={int(r)}, G={int(g)}, B={int(b)}")
-
-    # logika undertone (lebih realistis)
-    if r > g and r > b:
-        undertone = "Warm"
-    elif b > r and b > g:
-        undertone = "Cool"
-    else:
-        undertone = "Neutral"
-
+# tentukan undertone
+if rg > 10 and rb > 10:
+    undertone = "Warm"
+elif rb < -10:
+    undertone = "Cool"
+else:
+    undertone = "Neutral"
     st.subheader(f"Undertone kamu: {undertone}")
 
     # rekomendasi shade
