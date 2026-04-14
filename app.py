@@ -31,7 +31,19 @@ g_norm = g / total
 b_norm = b / total
 
 # logika undertone
-if r_norm > g_norm and r_norm > b_norm:
+# normalisasi RGB
+total = r + g + b
+r_norm = r / total
+g_norm = g / total
+b_norm = b / total
+
+# threshold logic
+if (r_norm - b_norm) > 0.02:
+    undertone = "Warm"
+elif (b_norm - r_norm) > 0.02:
+    undertone = "Cool"
+else:
+    undertone = "Neutral"
     undertone = "Warm"
 elif b_norm > r_norm:
     undertone = "Cool"
