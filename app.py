@@ -5,14 +5,15 @@ import cv2
 import torch
 import torchvision.transforms as transforms
 import open_clip
+from diffusers import StableDiffusionInpaintPipeline
 
 st.set_page_config(page_title="Shade AI", layout="centered")
-st.title("💄 Shade Recommendation AI (DINOv2 + CLIP)")
+st.title("💄 Shade Recommendation AI (DINOv2 + CLIP + Diffusion)")
 
 uploaded_file = st.file_uploader("Upload foto wajah kamu", type=["jpg","png","jpeg"])
 
 # =====================
-# LOAD MODEL
+# LOAD MODELS
 # =====================
 
 @st.cache_resource
@@ -26,8 +27,17 @@ def load_clip():
     model, _, preprocess = open_clip.create_model_and_transforms('ViT-B-32', pretrained='openai')
     return model, preprocess
 
+@st.cache_resource
+def load_diffusion():
+    pipe = StableDiffusionInpaintPipeline.from_pretrained(
+        "runwayml/stable-diffusion-inpainting",
+        torch_dtype=torch.float32
+    )
+    return pipe
+
 dino_model = load_dino()
 clip_model, clip_preprocess = load_clip()
+pipe = load_diffusion()
 
 # =====================
 # MAIN
@@ -39,7 +49,7 @@ if uploaded_file is not None:
 
     img = np.array(image)
 
-    # crop tengah (area wajah sederhana)
+    # crop wajah
     h, w, _ = img.shape
     face = img[h//4:3*h//4, w//4:3*w//4]
 
@@ -61,7 +71,7 @@ if uploaded_file is not None:
     st.success(f"✨ Undertone: {undertone}")
 
     # =====================
-    # DINO FEATURE
+    # DINOv2
     # =====================
     transform = transforms.Compose([
         transforms.ToPILImage(),
@@ -76,11 +86,11 @@ if uploaded_file is not None:
 
     dino_features = dino_features / dino_features.norm(dim=-1, keepdim=True)
 
-    st.subheader("🧠 Fitur wajah (DINOv2)")
+    st.subheader("🧠 DINOv2 Features")
     st.write(dino_features[0][:5])
 
     # =====================
-    # CLIP RECOMMENDATION
+    # CLIP
     # =====================
     shade_texts = [
         "coral lip cream",
@@ -100,7 +110,6 @@ if uploaded_file is not None:
         text_tokens = open_clip.tokenize(shade_texts)
         text_features = clip_model.encode_text(text_tokens)
 
-    # normalisasi
     image_features /= image_features.norm(dim=-1, keepdim=True)
     text_features /= text_features.norm(dim=-1, keepdim=True)
 
@@ -108,39 +117,24 @@ if uploaded_file is not None:
 
     top_probs, top_idxs = similarity[0].topk(3)
 
-    st.subheader("🤖 Rekomendasi AI (CLIP)")
+    st.subheader("🤖 CLIP Recommendation")
 
     for i in top_idxs:
         st.write("💄", shade_texts[i])
-from diffusers import StableDiffusionInpaintPipeline
-import torch
-import PIL
 
-st.subheader("💋 Simulasi Lip Cream (Diffusion AI)")
+    # =====================
+    # DIFFUSION
+    # =====================
+    st.subheader("💋 Lip Cream Simulation (Diffusion)")
 
-@st.cache_resource
-def load_diffusion():
-    pipe = StableDiffusionInpaintPipeline.from_pretrained(
-        "runwayml/stable-diffusion-inpainting",
-        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
-    )
-    return pipe
-
-pipe = load_diffusion()
-
-if uploaded_file is not None:
-    st.write("🎯 Generate simulasi lip cream...")
-
-    # image asli
     init_image = image.resize((512, 512))
 
-    # MASK sederhana (area bawah wajah = bibir kira-kira)
     mask = Image.new("L", (512, 512), 0)
     mask_np = np.array(mask)
-    mask_np[300:400, 200:320] = 255  # area bibir sederhana
-    mask = PIL.Image.fromarray(mask_np)
+    mask_np[300:400, 200:320] = 255
+    mask = Image.fromarray(mask_np)
 
-    prompt = f"{undertone} lip cream on lips, beauty makeup, natural skin tone"
+    prompt = f"{undertone} lip cream on lips, natural makeup"
 
     with torch.no_grad():
         result = pipe(
@@ -150,4 +144,4 @@ if uploaded_file is not None:
             num_inference_steps=20
         ).images[0]
 
-    st.image(result, caption="Hasil Simulasi Lip Cream")
+    st.image(result, caption="Hasil Simulasi")
