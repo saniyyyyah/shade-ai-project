@@ -59,7 +59,7 @@ if uploaded_file is not None:
     st.success(f"✨ Undertone: {undertone}")
 
     # =====================
-    # FILTER SHADE BY UNDERTONE
+    # SHADE FILTER BY UNDERTONE
     # =====================
     shade_map = {
         "Warm": ["coral lip cream", "peach lip cream", "terracotta lip cream"],
@@ -70,7 +70,7 @@ if uploaded_file is not None:
     shade_texts = shade_map[undertone]
 
     # =====================
-    # CLIP RECOMMENDATION
+    # CLIP PROCESS
     # =====================
     image_input = clip_preprocess(Image.fromarray(face)).unsqueeze(0)
     text_tokens = open_clip.tokenize(shade_texts)
@@ -79,9 +79,11 @@ if uploaded_file is not None:
         image_features = clip_model.encode_image(image_input)
         text_features = clip_model.encode_text(text_tokens)
 
+    # normalize
     image_features /= image_features.norm(dim=-1, keepdim=True)
     text_features /= text_features.norm(dim=-1, keepdim=True)
 
+    # similarity
     similarity = (image_features @ text_features.T).softmax(dim=-1)
 
     top_probs, top_idxs = similarity[0].topk(3)
@@ -91,5 +93,5 @@ if uploaded_file is not None:
     # =====================
     st.subheader("🤖 Rekomendasi AI (Hybrid CLIP)")
 
-    for i in top_idxs:
-        st.write("💄", shade_texts[i])
+    for rank, idx in enumerate(top_idxs):
+        st.write(f"💄 {shade_texts[idx]} — confidence: {top_probs[rank].item()*100:.1f}%")
