@@ -39,5 +39,3 @@ if uploaded_file is not None:
     st.success("Rekomendasi Shade:")
     for s in shades:
         st.write("💄", s)
-
-
