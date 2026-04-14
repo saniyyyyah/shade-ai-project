@@ -3,15 +3,17 @@ from PIL import Image
 import numpy as np
 import cv2
 
+st.set_page_config(page_title="Shade AI", layout="centered")
+
 st.title("💄 Shade Recommendation Based on Undertone")
 
 uploaded_file = st.file_uploader("Upload foto wajah kamu", type=["jpg","png","jpeg"])
 
 if uploaded_file is not None:
-    image = Image.open(uploaded_file)
+    image = Image.open(uploaded_file).convert("RGB")
     st.image(image, caption="Foto kamu", use_column_width=True)
 
-    # convert ke array
+    # convert ke numpy
     img = np.array(image)
 
     # crop tengah (area wajah sederhana)
@@ -21,20 +23,26 @@ if uploaded_file is not None:
     # convert ke HSV
     face_hsv = cv2.cvtColor(face, cv2.COLOR_RGB2HSV)
 
-    # ambil rata-rata hue
-    avg_hue = face_hsv[:,:,0].mean()
+    # ambil hue channel
+    hue = face_hsv[:,:,0]
 
-    st.write(f"Hue detected: {int(avg_hue)}")
+    # buang nilai ekstrem (biar lebih stabil)
+    hue = hue[(hue > 5) & (hue < 170)]
 
-    # klasifikasi undertone berdasarkan hue
-    if avg_hue < 20:
+    # rata-rata hue
+    avg_hue = hue.mean()
+
+    st.write(f"🎯 Hue detected: {int(avg_hue)}")
+
+    # klasifikasi undertone (lebih stabil)
+    if avg_hue < 25:
         undertone = "Warm"
-    elif avg_hue > 100:
+    elif avg_hue > 95:
         undertone = "Cool"
     else:
         undertone = "Neutral"
 
-    st.subheader(f"Undertone kamu: {undertone}")
+    st.success(f"✨ Undertone kamu: {undertone}")
 
     # rekomendasi shade
     if undertone == "Warm":
@@ -60,12 +68,12 @@ if uploaded_file is not None:
         "Dusty Rose": "#DCAE96"
     }
 
-    st.success("Rekomendasi Shade:")
+    st.subheader("💄 Rekomendasi Shade:")
 
     for s in shades:
         st.markdown(
-            f"<div style='display:flex;align-items:center;'>"
-            f"<div style='width:20px;height:20px;background:{colors[s]};margin-right:10px;'></div>"
+            f"<div style='display:flex;align-items:center;margin-bottom:5px;'>"
+            f"<div style='width:25px;height:25px;background:{colors[s]};margin-right:10px;border-radius:5px;'></div>"
             f"{s}</div>",
             unsafe_allow_html=True
         )
