@@ -8,7 +8,7 @@ import torchvision.transforms as transforms
 import timm
 
 st.set_page_config(page_title="Shade AI Hybrid", layout="centered")
-st.title("💄 Shade AI (HSV + CLIP + DINOv2 + Fusion AI)")
+st.title("💄 Shade AI (CLIP + DINOv2 FIXED)")
 
 uploaded_file = st.file_uploader("Upload foto wajah", type=["jpg","png","jpeg"])
 
@@ -27,7 +27,7 @@ def load_clip():
 clip_model, clip_preprocess = load_clip()
 
 # =====================
-# LOAD DINOv2 (FIXED)
+# LOAD DINO
 # =====================
 @st.cache_resource
 def load_dino():
@@ -47,7 +47,6 @@ if uploaded_file is not None:
 
     img = np.array(image)
 
-    # crop wajah aman
     h, w, _ = img.shape
     face = img[int(h*0.2):int(h*0.8), int(w*0.2):int(w*0.8)]
 
@@ -69,9 +68,6 @@ if uploaded_file is not None:
 
     st.success(f"✨ Undertone: {undertone}")
 
-    # =====================
-    # SHADE LIST
-    # =====================
     shade_map = {
         "Warm": ["coral lip cream", "peach lip cream", "terracotta lip cream"],
         "Cool": ["rose lip cream", "berry lip cream", "plum lip cream"],
@@ -81,7 +77,7 @@ if uploaded_file is not None:
     shade_texts = shade_map[undertone]
 
     # =====================
-    # CLIP FEATURE
+    # CLIP
     # =====================
     image_input = clip_preprocess(Image.fromarray(face)).unsqueeze(0)
     text_tokens = open_clip.tokenize(shade_texts)
@@ -96,7 +92,7 @@ if uploaded_file is not None:
     clip_sim = (image_features @ text_features.T)
 
     # =====================
-    # DINO FEATURE
+    # DINO
     # =====================
     transform = transforms.Compose([
         transforms.ToPILImage(),
@@ -107,17 +103,27 @@ if uploaded_file is not None:
     dino_input = transform(face).unsqueeze(0)
 
     with torch.no_grad():
-        dino_features = dino_model.forward_features(dino_input)
+        dino_feat = dino_model.forward_features(dino_input)
 
-    dino_features = dino_features.mean(dim=1)
-    dino_features = dino_features / dino_features.norm(dim=-1, keepdim=True)
+    dino_feat = dino_feat.mean(dim=1)
+    dino_feat = dino_feat / dino_feat.norm(dim=-1, keepdim=True)
 
     # =====================
-    # FUSION (INTELLIGENCE LAYER)
+    # 🔥 FIX DINO MAKES DIFFERENCE (IMPORTANT)
     # =====================
-    dino_boost = torch.ones_like(clip_sim) * 0.15
+    dino_sim = torch.zeros_like(clip_sim)
 
-    final_score = (0.7 * clip_sim) + (0.3 * dino_boost)
+    for i in range(len(shade_texts)):
+        dino_sim[0, i] = torch.cosine_similarity(
+            dino_feat,
+            text_features[i].unsqueeze(0),
+            dim=-1
+        )
+
+    # =====================
+    # FUSION
+    # =====================
+    final_score = (0.7 * clip_sim) + (0.3 * dino_sim)
     final_score = final_score.softmax(dim=-1)
 
     top_probs, top_idxs = final_score[0].topk(3)
@@ -125,12 +131,17 @@ if uploaded_file is not None:
     # =====================
     # OUTPUT
     # =====================
-    st.subheader("🤖 AI Recommendation (CLIP + DINO Fusion)")
+    st.subheader("🤖 Rekomendasi AI")
 
     for rank, idx in enumerate(top_idxs):
-        st.write(
-            f"💄 {shade_texts[idx]} — {top_probs[rank].item()*100:.1f}%"
-        )
+        st.write(f"💄 {shade_texts[idx]} — {top_probs[rank].item()*100:.1f}%")
 
-    st.subheader("🧠 DINOv2 Feature Preview")
-    st.write(dino_features[0][:5])
+    # =====================
+    # DINO DEBUG (BENERAN USEFUL)
+    # =====================
+    st.subheader("🧠 DINO Info")
+
+    st.write("Shape:", tuple(dino_feat.shape))
+    st.write("Mean:", float(dino_feat.mean()))
+    st.write("Std:", float(dino_feat.std()))
+    st.write("Norm:", float(dino_feat.norm()))
