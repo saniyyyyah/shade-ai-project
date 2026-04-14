@@ -2,9 +2,3 @@ streamlit
 pillow
 numpy
 opencv-python-headless
-
-torch
-torchvision
-timm
-
-open_clip_torch
