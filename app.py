@@ -112,3 +112,42 @@ if uploaded_file is not None:
 
     for i in top_idxs:
         st.write("💄", shade_texts[i])
+from diffusers import StableDiffusionInpaintPipeline
+import torch
+import PIL
+
+st.subheader("💋 Simulasi Lip Cream (Diffusion AI)")
+
+@st.cache_resource
+def load_diffusion():
+    pipe = StableDiffusionInpaintPipeline.from_pretrained(
+        "runwayml/stable-diffusion-inpainting",
+        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
+    )
+    return pipe
+
+pipe = load_diffusion()
+
+if uploaded_file is not None:
+    st.write("🎯 Generate simulasi lip cream...")
+
+    # image asli
+    init_image = image.resize((512, 512))
+
+    # MASK sederhana (area bawah wajah = bibir kira-kira)
+    mask = Image.new("L", (512, 512), 0)
+    mask_np = np.array(mask)
+    mask_np[300:400, 200:320] = 255  # area bibir sederhana
+    mask = PIL.Image.fromarray(mask_np)
+
+    prompt = f"{undertone} lip cream on lips, beauty makeup, natural skin tone"
+
+    with torch.no_grad():
+        result = pipe(
+            prompt=prompt,
+            image=init_image,
+            mask_image=mask,
+            num_inference_steps=20
+        ).images[0]
+
+    st.image(result, caption="Hasil Simulasi Lip Cream")
