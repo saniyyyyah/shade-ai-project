@@ -72,8 +72,16 @@ if uploaded_file is not None:
     # =====================
     # SHADE LIST
     # =====================
-    shade_map = {
-        "Warm": ["coral lip cream", "peach lip cream", "terracotta lip cream"],
+   shade_map = {
+    "Warm": [
+        "warm coral lipstick for yellow undertone skin",
+        "soft peach lipstick for warm skin tone",
+        "deep terracotta lipstick for tan warm skin"
+    ],
+    "Cool": [
+        "cool pink lipstick for fair cool undertone",
+        "berry lipstick for cool skin tone",
+        "
         "Cool": ["rose lip cream", "berry lip cream", "plum lip cream"],
         "Neutral": ["mauve lip cream", "nude lip cream", "rose lip cream"]
     }
