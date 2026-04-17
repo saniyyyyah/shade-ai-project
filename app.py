@@ -139,6 +139,42 @@ if uploaded_file is not None:
 
     for i in range(3):
         st.write(f"💄 {shade_texts[top_idxs[i]]} — {top_probs[i].item()*100:.1f}%")
+from diffusers import StableDiffusionInpaintPipeline
 
+st.subheader("💋 Simulasi Lipstick AI")
+
+@st.cache_resource
+def load_diffusion():
+    pipe = StableDiffusionInpaintPipeline.from_pretrained(
+        "runwayml/stable-diffusion-inpainting",
+        torch_dtype=torch.float32
+    )
+    return pipe
+
+pipe = load_diffusion()
+
+# resize image
+init_image = image.resize((512, 512))
+
+# mask sederhana (area bibir)
+mask = Image.new("L", (512, 512), 0)
+mask_np = np.array(mask)
+mask_np[300:400, 200:320] = 255
+mask = Image.fromarray(mask_np)
+
+# ambil shade terbaik
+best_shade = shade_texts[top_idxs[0]]
+
+prompt = f"{best_shade} on lips, natural makeup, realistic face"
+
+with torch.no_grad():
+    result = pipe(
+        prompt=prompt,
+        image=init_image,
+        mask_image=mask,
+        num_inference_steps=15
+    ).images[0]
+
+st.image(result, caption="Hasil Simulasi Lipstick")
     st.subheader("🧠 DINO Influence")
     st.write("DINO weight:", round(dino_weight, 3))
