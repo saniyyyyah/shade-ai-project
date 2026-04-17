@@ -6,6 +6,3 @@ torch
 torchvision
 open-clip-torch
 timm
-diffusers
-transformers
-accelerate
