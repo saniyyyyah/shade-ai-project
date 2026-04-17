@@ -5,11 +5,13 @@ import cv2
 import torch
 import open_clip
 
-st.title("💄 Shade AI (HSV + CLIP)")
+st.title("💄 Shade AI (NO 33% FIX)")
 
 uploaded_file = st.file_uploader("Upload foto", type=["jpg","png","jpeg"])
 
-# load CLIP
+# =====================
+# LOAD CLIP
+# =====================
 @st.cache_resource
 def load_clip():
     model, _, preprocess = open_clip.create_model_and_transforms(
@@ -21,6 +23,9 @@ def load_clip():
 
 clip_model, clip_preprocess = load_clip()
 
+# =====================
+# MAIN
+# =====================
 if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
     st.image(image)
@@ -47,15 +52,27 @@ if uploaded_file is not None:
     else:
         undertone = "Neutral"
 
-    st.success(f"Undertone: {undertone}")
+    st.success(f"✨ Undertone: {undertone}")
 
     # =====================
-    # SHADE LIST
+    # SHADE LIST (ANTI MIRIP)
     # =====================
     shade_map = {
-        "Warm": ["coral lipstick", "peach lipstick", "terracotta lipstick"],
-        "Cool": ["pink lipstick", "berry lipstick", "plum lipstick"],
-        "Neutral": ["nude lipstick", "mauve lipstick", "rose lipstick"]
+        "Warm": [
+            "bright coral glossy lipstick for warm undertone skin",
+            "soft peach natural lipstick warm skin tone",
+            "deep terracotta matte bold lipstick tan skin"
+        ],
+        "Cool": [
+            "cool pink glossy lipstick fair skin",
+            "dark berry bold lipstick cool undertone",
+            "plum elegant matte lipstick cool tone"
+        ],
+        "Neutral": [
+            "natural nude everyday lipstick neutral skin",
+            "mauve soft elegant lipstick neutral tone",
+            "rose balanced lipstick natural makeup look"
+        ]
     }
 
     shade_texts = shade_map[undertone]
@@ -70,10 +87,14 @@ if uploaded_file is not None:
         image_features = clip_model.encode_image(image_input)
         text_features = clip_model.encode_text(text_tokens)
 
+    # normalisasi
     image_features /= image_features.norm(dim=-1, keepdim=True)
     text_features /= text_features.norm(dim=-1, keepdim=True)
 
-    similarity = (image_features @ text_features.T).softmax(dim=-1)
+    # 🔥 FIX BIAR GA 33%
+    similarity = (image_features @ text_features.T)
+    similarity = similarity * 10
+    similarity = similarity.softmax(dim=-1)
 
     top_probs, top_idxs = similarity[0].topk(3)
 
