@@ -4,5 +4,8 @@ numpy
 opencv-python-headless
 torch
 torchvision
-open_clip_torch
+open-clip-torch
 timm
+diffusers
+transformers
+accelerate
