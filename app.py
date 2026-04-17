@@ -8,7 +8,7 @@ import torchvision.transforms as transforms
 import timm
 
 st.set_page_config(page_title="Shade AI Hybrid", layout="centered")
-st.title("💄 Shade AI (FINAL NO ERROR)")
+st.title("💄 Shade AI (FINAL FIXED)")
 
 uploaded_file = st.file_uploader("Upload foto wajah", type=["jpg","png","jpeg"])
 
@@ -70,20 +70,24 @@ if uploaded_file is not None:
     st.success(f"✨ Undertone: {undertone}")
 
     # =====================
-    # SHADE LIST
+    # SHADE LIST (FIXED)
     # =====================
-   shade_map = {
-    "Warm": [
-        "warm coral lipstick for yellow undertone skin",
-        "soft peach lipstick for warm skin tone",
-        "deep terracotta lipstick for tan warm skin"
-    ],
-    "Cool": [
-        "cool pink lipstick for fair cool undertone",
-        "berry lipstick for cool skin tone",
-        "
-        "Cool": ["rose lip cream", "berry lip cream", "plum lip cream"],
-        "Neutral": ["mauve lip cream", "nude lip cream", "rose lip cream"]
+    shade_map = {
+        "Warm": [
+            "warm coral lipstick for yellow undertone skin",
+            "soft peach lipstick for warm skin tone",
+            "deep terracotta lipstick for tan warm skin"
+        ],
+        "Cool": [
+            "cool pink lipstick for fair cool undertone",
+            "berry lipstick for cool skin tone",
+            "plum lipstick for cool undertone face"
+        ],
+        "Neutral": [
+            "natural nude lipstick for neutral skin",
+            "mauve lipstick for neutral undertone",
+            "soft rose lipstick natural look"
+        ]
     }
 
     shade_texts = shade_map[undertone]
@@ -104,7 +108,7 @@ if uploaded_file is not None:
     clip_sim = (image_features @ text_features.T)
 
     # =====================
-    # DINO (SAFE VERSION)
+    # DINO
     # =====================
     transform = transforms.Compose([
         transforms.ToPILImage(),
@@ -120,11 +124,11 @@ if uploaded_file is not None:
     dino_feat = dino_feat.mean(dim=1)
     dino_feat = dino_feat / dino_feat.norm(dim=-1, keepdim=True)
 
-    # 👉 jadikan scalar (biar tidak error & tetap kepakai)
+    # scalar influence
     dino_weight = float(torch.sigmoid(dino_feat.mean()))
 
     # =====================
-    # FUSION (FIXED)
+    # FUSION
     # =====================
     final_score = (0.85 * clip_sim) + (0.15 * clip_sim * dino_weight)
     final_score = final_score.softmax(dim=-1)
