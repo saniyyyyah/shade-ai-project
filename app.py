@@ -4,8 +4,10 @@ import numpy as np
 import cv2
 import torch
 import open_clip
+import torchvision.transforms as transforms
+import timm
 
-st.title("💄 Shade AI (NO 33% FIX)")
+st.title("💄 Shade AI (CLIP + DINO REAL FUSION)")
 
 uploaded_file = st.file_uploader("Upload foto", type=["jpg","png","jpeg"])
 
@@ -22,6 +24,17 @@ def load_clip():
     return model, preprocess
 
 clip_model, clip_preprocess = load_clip()
+
+# =====================
+# LOAD DINO
+# =====================
+@st.cache_resource
+def load_dino():
+    model = timm.create_model('vit_base_patch16_224', pretrained=True)
+    model.eval()
+    return model
+
+dino_model = load_dino()
 
 # =====================
 # MAIN
@@ -55,7 +68,7 @@ if uploaded_file is not None:
     st.success(f"✨ Undertone: {undertone}")
 
     # =====================
-    # SHADE LIST (ANTI MIRIP)
+    # SHADE TEXT
     # =====================
     shade_map = {
         "Warm": [
@@ -87,21 +100,42 @@ if uploaded_file is not None:
         image_features = clip_model.encode_image(image_input)
         text_features = clip_model.encode_text(text_tokens)
 
-    # normalisasi
     image_features /= image_features.norm(dim=-1, keepdim=True)
     text_features /= text_features.norm(dim=-1, keepdim=True)
 
-    # 🔥 FIX BIAR GA 33%
-    similarity = (image_features @ text_features.T)
-    similarity = similarity * 10
-    similarity = similarity.softmax(dim=-1)
+    clip_sim = (image_features @ text_features.T)
 
-    top_probs, top_idxs = similarity[0].topk(3)
+    # =====================
+    # DINO FEATURE
+    # =====================
+    transform = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Resize((224,224)),
+        transforms.ToTensor()
+    ])
+
+    dino_input = transform(face).unsqueeze(0)
+
+    with torch.no_grad():
+        dino_feat = dino_model.forward_features(dino_input)
+
+    dino_feat = dino_feat.mean(dim=1)
+    dino_feat = dino_feat / dino_feat.norm(dim=-1, keepdim=True)
+
+    # =====================
+    # 🔥 DINO → IMAGE FEATURE BOOST
+    # =====================
+    dino_strength = torch.sigmoid(dino_feat.mean())
+
+    # gabung ke CLIP
+    fusion_sim = clip_sim * (1 + 0.5 * dino_strength)
+
+    # final softmax
+    final_score = (fusion_sim * 10).softmax(dim=-1)
+
+    top_probs, top_idxs = final_score[0].topk(3)
 
     # =====================
     # OUTPUT
     # =====================
-    st.subheader("💄 Rekomendasi AI")
-
-    for i in range(3):
-        st.write(f"{shade_texts[top_idxs[i]]} — {top_probs[i].item()*100:.1f}%")
+    st.subheader("🤖 AI
