@@ -7,7 +7,7 @@ import open_clip
 import torchvision.transforms as transforms
 import timm
 
-st.title("💄 Shade AI (CLIP + DINO REAL FUSION)")
+st.title("💄 Shade AI (FINAL STABLE)")
 
 uploaded_file = st.file_uploader("Upload foto", type=["jpg","png","jpeg"])
 
@@ -26,11 +26,11 @@ def load_clip():
 clip_model, clip_preprocess = load_clip()
 
 # =====================
-# LOAD DINO
+# LOAD DINO (AMAN)
 # =====================
 @st.cache_resource
 def load_dino():
-    model = timm.create_model('vit_base_patch16_224', pretrained=True)
+    model = timm.create_model('vit_base_patch16_224', pretrained=True, num_classes=0)
     model.eval()
     return model
 
@@ -106,7 +106,7 @@ if uploaded_file is not None:
     clip_sim = (image_features @ text_features.T)
 
     # =====================
-    # DINO FEATURE
+    # DINO (AMAN)
     # =====================
     transform = transforms.Compose([
         transforms.ToPILImage(),
@@ -117,25 +117,28 @@ if uploaded_file is not None:
     dino_input = transform(face).unsqueeze(0)
 
     with torch.no_grad():
-        dino_feat = dino_model.forward_features(dino_input)
+        dino_feat = dino_model(dino_input)
 
-    dino_feat = dino_feat.mean(dim=1)
     dino_feat = dino_feat / dino_feat.norm(dim=-1, keepdim=True)
 
-    # =====================
-    # 🔥 DINO → IMAGE FEATURE BOOST
-    # =====================
-    dino_strength = torch.sigmoid(dino_feat.mean())
+    # 👉 ambil pengaruh sederhana tapi stabil
+    dino_weight = float(torch.sigmoid(dino_feat.mean()))
 
-    # gabung ke CLIP
-    fusion_sim = clip_sim * (1 + 0.5 * dino_strength)
-
-    # final softmax
-    final_score = (fusion_sim * 10).softmax(dim=-1)
+    # =====================
+    # FUSION
+    # =====================
+    final_score = (clip_sim * (1 + 0.3 * dino_weight))
+    final_score = (final_score * 10).softmax(dim=-1)
 
     top_probs, top_idxs = final_score[0].topk(3)
 
     # =====================
     # OUTPUT
     # =====================
-    st.subheader("🤖 AI
+    st.subheader("🤖 Rekomendasi AI")
+
+    for i in range(3):
+        st.write(f"💄 {shade_texts[top_idxs[i]]} — {top_probs[i].item()*100:.1f}%")
+
+    st.subheader("🧠 DINO Influence")
+    st.write("DINO weight:", round(dino_weight, 3))
