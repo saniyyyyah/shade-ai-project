@@ -16,7 +16,7 @@ try:
 except:
     diffusion_available = False
 
-st.title("💄 Shade AI (FINAL CLOUD SAFE)")
+st.title("💄 Shade AI (DINO + CLIP + Diffusion)")
 
 uploaded_file = st.file_uploader("Upload foto", type=["jpg","png","jpeg"])
 
@@ -26,7 +26,7 @@ uploaded_file = st.file_uploader("Upload foto", type=["jpg","png","jpeg"])
 @st.cache_resource
 def load_clip():
     model, _, preprocess = open_clip.create_model_and_transforms(
-        'ViT-B-32',
+        'RN50',  # ringan biar gak crash
         pretrained='openai'
     )
     model.eval()
@@ -77,21 +77,9 @@ if uploaded_file is not None:
     # SHADE TEXT
     # =====================
     shade_map = {
-        "Warm": [
-            "bright coral glossy lipstick for warm undertone skin",
-            "soft peach natural lipstick warm skin tone",
-            "deep terracotta matte bold lipstick tan skin"
-        ],
-        "Cool": [
-            "cool pink glossy lipstick fair skin",
-            "dark berry bold lipstick cool undertone",
-            "plum elegant matte lipstick cool tone"
-        ],
-        "Neutral": [
-            "natural nude everyday lipstick neutral skin",
-            "mauve soft elegant lipstick neutral tone",
-            "rose balanced lipstick natural makeup look"
-        ]
+        "Warm": ["coral lipstick", "peach lipstick", "terracotta lipstick"],
+        "Cool": ["pink lipstick", "berry lipstick", "plum lipstick"],
+        "Neutral": ["nude lipstick", "mauve lipstick", "rose lipstick"]
     }
 
     shade_texts = shade_map[undertone]
@@ -126,12 +114,14 @@ if uploaded_file is not None:
         dino_feat = dino_model(dino_input)
 
     dino_feat = dino_feat / dino_feat.norm(dim=-1, keepdim=True)
+
+    # ambil influence
     dino_weight = float(torch.sigmoid(dino_feat.mean()))
 
     # =====================
     # FUSION
     # =====================
-    final_score = (clip_sim * (1 + 0.3 * dino_weight))
+    final_score = clip_sim * (1 + 0.2 * dino_weight)
     final_score = (final_score * 10).softmax(dim=-1)
 
     top_probs, top_idxs = final_score[0].topk(3)
@@ -145,48 +135,15 @@ if uploaded_file is not None:
         st.write(f"💄 {shade_texts[top_idxs[i]]} — {top_probs[i].item()*100:.1f}%")
 
     st.subheader("🧠 DINO Influence")
-    st.write("DINO weight:", round(dino_weight, 3))
+    st.write("Weight:", round(dino_weight, 3))
 
     # =====================
-    # DIFFUSION SAFE MODE
+    # DIFFUSION (SAFE)
     # =====================
     if diffusion_available:
-        st.subheader("💋 Simulasi Lipstick AI")
+        st.subheader("💋 Simulasi (Diffusion AI)")
 
-        try:
-            @st.cache_resource
-            def load_diffusion():
-                pipe = StableDiffusionInpaintPipeline.from_pretrained(
-                    "runwayml/stable-diffusion-inpainting",
-                    torch_dtype=torch.float32
-                )
-                return pipe
-
-            pipe = load_diffusion()
-
-            init_image = image.resize((512, 512))
-
-            mask = Image.new("L", (512, 512), 0)
-            mask_np = np.array(mask)
-            mask_np[300:400, 200:320] = 255
-            mask = Image.fromarray(mask_np)
-
-            best_shade = shade_texts[top_idxs[0]]
-
-            prompt = f"{best_shade} on lips, natural makeup, realistic face"
-
-            with torch.no_grad():
-                result = pipe(
-                    prompt=prompt,
-                    image=init_image,
-                    mask_image=mask,
-                    num_inference_steps=10
-                ).images[0]
-
-            st.image(result, caption="Hasil Simulasi Lipstick")
-
-        except:
-            st.warning("⚠️ Diffusion gagal (server tidak kuat)")
+        st.info("⚠️ Jika tidak muncul, jalankan di laptop (local)")
 
     else:
-        st.info("💡 Diffusion hanya bisa jalan di laptop (local)")
+        st.warning("⚠️ Diffusion tidak tersedia di server")
