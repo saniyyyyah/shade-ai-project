@@ -6,9 +6,17 @@ import torch
 import open_clip
 import torchvision.transforms as transforms
 import timm
-from diffusers import StableDiffusionInpaintPipeline
 
-st.title("💄 Shade AI (FINAL + DIFFUSION)")
+# =====================
+# TRY DIFFUSION
+# =====================
+try:
+    from diffusers import StableDiffusionInpaintPipeline
+    diffusion_available = True
+except:
+    diffusion_available = False
+
+st.title("💄 Shade AI (FINAL CLOUD SAFE)")
 
 uploaded_file = st.file_uploader("Upload foto", type=["jpg","png","jpeg"])
 
@@ -30,17 +38,8 @@ def load_dino():
     model.eval()
     return model
 
-@st.cache_resource
-def load_diffusion():
-    pipe = StableDiffusionInpaintPipeline.from_pretrained(
-        "runwayml/stable-diffusion-inpainting",
-        torch_dtype=torch.float32
-    )
-    return pipe
-
 clip_model, clip_preprocess = load_clip()
 dino_model = load_dino()
-pipe = load_diffusion()
 
 # =====================
 # MAIN
@@ -149,27 +148,45 @@ if uploaded_file is not None:
     st.write("DINO weight:", round(dino_weight, 3))
 
     # =====================
-    # DIFFUSION
+    # DIFFUSION SAFE MODE
     # =====================
-    st.subheader("💋 Simulasi Lipstick AI")
+    if diffusion_available:
+        st.subheader("💋 Simulasi Lipstick AI")
 
-    init_image = image.resize((512, 512))
+        try:
+            @st.cache_resource
+            def load_diffusion():
+                pipe = StableDiffusionInpaintPipeline.from_pretrained(
+                    "runwayml/stable-diffusion-inpainting",
+                    torch_dtype=torch.float32
+                )
+                return pipe
 
-    mask = Image.new("L", (512, 512), 0)
-    mask_np = np.array(mask)
-    mask_np[300:400, 200:320] = 255
-    mask = Image.fromarray(mask_np)
+            pipe = load_diffusion()
 
-    best_shade = shade_texts[top_idxs[0]]
+            init_image = image.resize((512, 512))
 
-    prompt = f"{best_shade} on lips, natural makeup, realistic face"
+            mask = Image.new("L", (512, 512), 0)
+            mask_np = np.array(mask)
+            mask_np[300:400, 200:320] = 255
+            mask = Image.fromarray(mask_np)
 
-    with torch.no_grad():
-        result = pipe(
-            prompt=prompt,
-            image=init_image,
-            mask_image=mask,
-            num_inference_steps=15
-        ).images[0]
+            best_shade = shade_texts[top_idxs[0]]
 
-    st.image(result, caption="Hasil Simulasi Lipstick")
+            prompt = f"{best_shade} on lips, natural makeup, realistic face"
+
+            with torch.no_grad():
+                result = pipe(
+                    prompt=prompt,
+                    image=init_image,
+                    mask_image=mask,
+                    num_inference_steps=10
+                ).images[0]
+
+            st.image(result, caption="Hasil Simulasi Lipstick")
+
+        except:
+            st.warning("⚠️ Diffusion gagal (server tidak kuat)")
+
+    else:
+        st.info("💡 Diffusion hanya bisa jalan di laptop (local)")
